@@ -1,0 +1,112 @@
+---
+- hosts: rustdesk
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    # see https://docs.ansible.com/ansible/latest/user_guide/become.html#risks-of-becoming-an-unprivileged-user
+    ansible_common_remote_group: "{{pac}}"
+    ansible_remote_tmp: ~/.ansible/tmp
+
+  tasks:
+  - name: Create user and domain
+    import_tasks: tasks/hs_basis.yml
+
+  #################################
+  ## create directories
+  #################################
+  - name: create directory bin
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    file:
+      path: "/home/pacs/{{pac}}/users/{{user}}/bin"
+      state: directory
+  - name: create directory etc
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    file:
+      path: "/home/pacs/{{pac}}/users/{{user}}/etc"
+      state: directory
+  - name: create directory var/tmp
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    file:
+      path: "/home/pacs/{{pac}}/users/{{user}}/var/tmp"
+      state: directory
+  - name: create directory var/log
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    file:
+      path: "/home/pacs/{{pac}}/users/{{user}}/var/log"
+      state: directory
+  - name: create directory var/run
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    file:
+      path: "/home/pacs/{{pac}}/users/{{user}}/var/run"
+      state: directory
+
+  ##################################
+  ## other software configuration
+  ##################################
+  - name: upload monit configuration
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    template: dest="/home/pacs/{{pac}}/users/{{user}}/.monitrc" src="templates/monitrc" mode=0600
+
+  - name: upload logrotate configuration
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    template: dest="/home/pacs/{{pac}}/users/{{user}}/.logrotate" src="templates/logrotate" mode=0600
+
+  - name: upload start script for hbbr
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    template: dest="/home/pacs/{{pac}}/users/{{user}}/bin" src="templates/hbbr-start.sh" mode=0700
+  - name: upload stop script for hbbr
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    template: dest="/home/pacs/{{pac}}/users/{{user}}/bin" src="templates/hbbr-stop.sh" mode=0700
+  - name: upload start script for hbbs
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    template: dest="/home/pacs/{{pac}}/users/{{user}}/bin" src="templates/hbbs-start.sh" mode=0700
+  - name: upload stop script for hbbs
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    template: dest="/home/pacs/{{pac}}/users/{{user}}/bin" src="templates/hbbs-stop.sh" mode=0700
+
+  ##################################
+  ## install rustdesk server
+  ##################################
+  - name: install rustdesk server
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    unarchive:
+      src: https://github.com/rustdesk/rustdesk-server/releases/download/{{rustdesk_version}}/rustdesk-server-linux-x64.zip
+      remote_src: yes
+      dest: /home/pacs/{{pac}}/users/{{user}}/bin
+      creates: /home/pacs/{{pac}}/users/{{user}}/bin/hbbr
+
+  ####################################
+  ## install cron jobs
+  ####################################
+  - name: start monit as cronjob
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    cron:
+      name: "start monit at reboot"
+      special_time: reboot
+      job: rm -f $HOME/var/run/* && /usr/bin/monit -c "$HOME/.monitrc"
+
+  ##############################################
+  ## start services via monit
+  ##############################################
+  - name: start monit
+    become: yes
+    become_user: "{{pac}}-{{user}}"
+    shell: |
+      /usr/bin/monit -c ".monitrc"
+    args:
+      executable: /bin/bash
+      chdir: "/home/pacs/{{pac}}/users/{{user}}/"
+      creates: "/home/pacs/{{pac}}/users/{{user}}/var/run/monit.id"
+
