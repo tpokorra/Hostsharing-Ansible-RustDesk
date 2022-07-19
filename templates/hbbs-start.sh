@@ -2,5 +2,14 @@
 export HOME=/home/pacs/{{pac}}/users/{{user}}
 export PID=$HOME/var/run/hbbs.pid
 cd $HOME/bin
-exec ./hbbs --port {{rendezvous_port}} --relay-servers {{domain}}  >$HOME/var/log/hbbs.log 2>&1 &
+
+key=""
+if [ -f id_ed25519 ]; then
+    value=`cat id_ed25519`
+    key="--key $value"
+fi
+
+export ENCRYPTED_ONLY=1
+export RELAY={{domain}}:{{relay_port}}
+exec ./hbbs --port {{rendezvous_port}} $key  >$HOME/var/log/hbbs.log 2>&1 &  # --relay-servers {{domain}}
 echo $! > $PID
