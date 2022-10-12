@@ -10,6 +10,6 @@ if [ -f id_ed25519 ]; then
 fi
 
 export ENCRYPTED_ONLY=1
-export RELAY={{domain}}:{{relay_port}}
+export RELAY={{relay_ip}}:{{relay_port}}
 exec ./hbbs --port {{rendezvous_port}} $key  >$HOME/var/log/hbbs.log 2>&1 &  # --relay-servers {{domain}}
 echo $! > $PID

@@ -10,6 +10,8 @@ rustdesk:
 
       rendezvous_NATTest_port: "21115"
       rendezvous_port: "21116"
+      # replace this ip with the ip that you see during start of hbbs: INFO [src/rendezvous_server.rs:137] local-ip: "aaa.bbb.ccc.ddd"
+      relay_ip: "127.0.0.1"
       relay_port: "21117"
       rendezvous_websocket_port: "21118"
       relay_websocket_port: "21119"
